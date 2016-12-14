@@ -2,7 +2,6 @@ const md5 = require('md5')
 const passport = require('passport')
 const session = require('express-session')
 const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
-const FacebookStrategy = require('passport-facebook').Strategy
 const redis = require('redis').createClient(process.env.REDIS_URL)
 const cookieParser = require('cookie-parser')
 
@@ -16,11 +15,6 @@ const clientID = "382295936765-f6ifjt2so64q0krvijg06rsoktetot0n.apps.googleuserc
 const callbackURL = isLocal ? 'http://localhost:3000/auth/google_callback' : 'https://rb-backend-ys2016-final.herokuapp.com/auth/google_callback'
 const configAuth = {clientSecret, clientID, callbackURL}
 
-const fb_clientSecret = "95d96480c7eb36c46588417c479a703e"
-const fb_clientID = "983028555174660"
-const fb_callbackURL = isLocal ? 'http://localhost:3000/auth/facebook/callback' : 'https://rb-backend-ys2016-final.herokuapp.com/auth/facebook/callback'
-const fb_configAuth = {clientSecret : fb_clientSecret, clientID : fb_clientID, callbackURL : fb_callbackURL}
-
 const User = require('./model.js').User
 const Profile = require('./model.js').Profile
 const Article = require('./model.js').Article
@@ -31,17 +25,14 @@ const getUser = (username, callback) => {
 }
 
 const cookieKey = 'sid'
-// key : sid, value : username
-const sessionUser = {}
-
 
 const generateCode = (userObj) => {
-	const code = md5(userObj.username)
-	return code
+    const code = md5(userObj.username)
+    return code
 }
 
 const mergeUserRecord = (userToLink, logginUser) => {
-    console.log(`mergeUserRecord : ${userToLink}`)
+    console.log(`mergeUserRecord : ${userToLink} with ${logginUser}`)
     let query = { username : logginUser}
     let update = { auth : {'google' : userToLink, 'normal' : logginUser}}
     User.findOneAndUpdate(query, update, {new : true}).exec()
@@ -85,19 +76,19 @@ const mergeUserRecord = (userToLink, logginUser) => {
 }
 
 // POST /login
-// {username: username, password: password }	
-// { username: :user, result: "success"}	
+// {username: username, password: password }
+// { username: :user, result: "success"}
 // log in to server, sets session id and hash cookies
 const login = (req, res) => {
-	console.log(req.body)
+    console.log(req.body)
     console.log('call login')
     var username = req.body.username
-	var password = req.body.password
-	if (!username || !password) {
-		res.status(400).send('does not provide username or password')
-		return
-	}
-	getUser(username, function (err, users) {
+    var password = req.body.password
+    if (!username || !password) {
+        res.status(400).send('does not provide username or password')
+        return
+    }
+    getUser(username, function (err, users) {
         if (!err) {
             if (users.length === 0) {
                 console.log(`can\'t find user ${username}`)
@@ -139,16 +130,16 @@ const login = (req, res) => {
 }
 
 // POST /register
-// request payload : { username, email, dob, zipcode, password}	
-// response payload : { result: 'success', username: username}	
+// request payload : { username, email, dob, zipcode, password}
+// response payload : { result: 'success', username: username}
 const register = (req, res) => {
     console.log('call register')
-	console.log(req.body)
-	var username = req.body.username
-	var password = req.body.password
-	var email = req.body.email
-	var dob = req.body.dob
-	var zipcode = req.body.zipcode
+    console.log(req.body)
+    var username = req.body.username
+    var password = req.body.password
+    var email = req.body.email
+    var dob = req.body.dob
+    var zipcode = req.body.zipcode
 
 
     getUser(username, function (err, users) {
@@ -195,18 +186,18 @@ const register = (req, res) => {
 }
 
 const isLoggedIn = (req, res, next) => {
-	// read cookie
+    // read cookie
     console.log('call isLoggedIn')
-	console.log(req.cookies)
-	const sid = req.cookies[cookieKey]
+    console.log(req.cookies)
+    const sid = req.cookies[cookieKey]
     if (req.cookies['userToLink']) {
-	    req.userToLink = req.cookies['userToLink']
+        req.userToLink = req.cookies['userToLink']
         console.log(`userToLink ${req.userToLink}`)
     }
 
     if (req.isAuthenticated()) {
-	    console.log('third-party login successfully')
-	    req.username = req.user.username
+        console.log('third-party login successfully')
+        req.username = req.user.username
         next()
     } else {
         if (!sid) {
@@ -229,7 +220,7 @@ const isLoggedIn = (req, res, next) => {
 }
 
 // PUT /logout
-// /logout	PUT	none	OK	
+// /logout	PUT	none	OK
 // log out of server, clears session id
 const logout = (req, res) => {
     if (req.isAuthenticated()) {
@@ -244,13 +235,13 @@ const logout = (req, res) => {
         res.clearCookie(cookieKey)
     }
     res.clearCookie('userToLink')
-	res.send('OK')
+    res.send('OK')
 }
 
 // /sample	GET	none
 // [ { id: 1, author: Scott, ... }, { ... } ]	Array of sample posts.
 const getSample = (req, res) => {
-	res.send('array of sample posts.')
+    res.send('array of sample posts.')
 }
 
 const profile = (req, res) => {
@@ -322,7 +313,7 @@ passport.use(new GoogleStrategy(configAuth, function (accessToken, refreshToken,
         console.log(profile)
         const displayName = (profile.displayName === '') ?
             `${profile.emails[0].value}@google` : `${profile.displayName}@google`
-        User.findOne({ username : displayName }).exec()
+        User.findOne({ "auth.google" : displayName }).exec()
             .then(user => {
                 if (user) {
                     console.log(`${user} exist.`)
@@ -348,10 +339,10 @@ passport.use(new GoogleStrategy(configAuth, function (accessToken, refreshToken,
                             return doc
                         })
                         .then(doc => {
-                            new Profile(newProfile).save()
-                                .then(profile => {
-                                    console.log('save profile successfully! ', profile)
-                                })
+                                new Profile(newProfile).save()
+                                    .then(profile => {
+                                        console.log('save profile successfully! ', profile)
+                                    })
                                 return doc
                             }
                         )
@@ -368,15 +359,25 @@ passport.use(new GoogleStrategy(configAuth, function (accessToken, refreshToken,
     })
 }))
 
-passport.use(new FacebookStrategy(fb_configAuth, function (accessToken, refreshToken, profile, done) {
-    // Extract the minimal profile information we need from the profile object
-    process.nextTick(function () {
-        console.log('TICK!')
-        console.log(accessToken)
-        return done(null, profile)
-    })
-}))
 
+const oauthLogin = (app) => {
+    return (req, res) => {
+        const sid = req.cookies[cookieKey]
+        const frontend_url = app.locals.frontend_url
+        console.log(`redirect to ${frontend_url}`)
+        redis.hgetall(sid, function (err, userObj) {
+            // Have already logged in as normal user, need to link account
+            if (userObj && userObj.username) {
+                console.log(sid + ' mapped to ', userObj.username)
+                console.log('Have already logged in as normal user, need to link account')
+                mergeUserRecord(req.user.username, userObj.username)
+                res.redirect(frontend_url)
+            } else {
+                res.redirect(frontend_url)
+            }
+        })
+    }
+}
 
 module.exports = {
     auth : (app) => {
@@ -388,23 +389,13 @@ module.exports = {
         app.post('/register', register)
         app.get('/sample', getSample)
         app.use('/auth/google/login', (req, res, next) => {
-                console.log(`oauth login from ${req.headers.referer}`)
-                app.locals.frontend_url = req.headers.referer
-                next()
-            }, passport.authenticate('google', {scope : 'email'}))
+            console.log(`oauth login from ${req.headers.referer}`)
+            app.locals.frontend_url = req.headers.referer
+            next()
+        }, passport.authenticate('google', {scope : 'email'}))
         app.use('/auth/google_callback', passport.authenticate('google', {
             failureRedirect : '/fail'
-        }), (req, res) => {
-            const frontend_url = app.locals.frontend_url
-            console.log(`redirect to ${frontend_url}`)
-            res.redirect(frontend_url)
-        })
-
-        app.use('/auth/facebook/callback', passport.authenticate('facebook', {
-            successRedirect : '/profile',
-            failureRedirect : '/fail'
-        }))
-        app.use('/auth/facebook/login', passport.authenticate('facebook', {scope : 'email'}))
+        }), oauthLogin(app))
 
         app.put('/logout', isLoggedIn, logout)
         app.use('/profile', isLoggedIn, profile)

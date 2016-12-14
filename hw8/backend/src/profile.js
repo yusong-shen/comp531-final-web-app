@@ -3,7 +3,7 @@ const stream = require('stream')
 const uploadImage = require('./uploadCloudinary').uploadImage
 
 if (!process.env.CLOUDINARY_URL) {
-     process.env.CLOUDINARY_URL="cloudinary://365686241836513:d5_fD-24mTt6KFlYL7osaIaEDLg@hmzohj0ob"
+    process.env.CLOUDINARY_URL="cloudinary://365686241836513:d5_fD-24mTt6KFlYL7osaIaEDLg@hmzohj0ob"
 }
 
 const Profile = require('./model.js').Profile
@@ -22,24 +22,24 @@ const updateProfile = (query, update, callback, options) => {
 
 // get field for single user
 const getField = (field) => {
-        return (req, res) => {
-            const user = req.params.user ? req.params.user : req.username
-            getProfile(user, function (err, profile) {
-                if (!err) {
-                    // console.log(profile)
-                    if (profile.length === 0) {
-                        res.send(404, `can't find ${user}`)
-                    } else {
-                        const result = {}
-                        result["username"] = user
-                        result[field] = profile[0][field]
-                        res.send(result)
-                    }
+    return (req, res) => {
+        const user = req.params.user ? req.params.user : req.username
+        getProfile(user, function (err, profile) {
+            if (!err) {
+                // console.log(profile)
+                if (profile.length === 0) {
+                    res.send(404, `can't find ${user}`)
                 } else {
-                    res.send(404, err)
+                    const result = {}
+                    result["username"] = user
+                    result[field] = profile[0][field]
+                    res.send(result)
                 }
-            })
-        }
+            } else {
+                res.send(404, err)
+            }
+        })
+    }
 }
 
 // get field for a list of user
@@ -109,7 +109,6 @@ const linkAccount = (req, res) => {
 }
 
 const unlinkAccount = (req, res) => {
-    // third party login
     const query = { username : req.username}
     const update = { auth : {'normal' : req.username}}
     User.findOneAndUpdate(query, update, {new : true}).exec()
