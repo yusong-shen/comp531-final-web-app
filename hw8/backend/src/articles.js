@@ -32,24 +32,31 @@ const doUpload = (publicName, req, res, next) => {
     // and the end of the buffer we tell cloudinary to end the upload.
 }
 
-const getTextAndImage = (req, res, next) => (
-    multer().fields([
-        { name : 'text', maxCount : 1} ,
-        { name : 'image', maxCount : 1}
-    ])(req, res, next)
-)
+const getTextAndImage = (req, res, next) => {
+        multer().fields([
+            { name : 'text', maxCount : 1} ,
+            { name : 'image', maxCount : 1}
+        ])(req, res, next)
+}
 
-const uploadTextAndImage = (publicName) => (req, res, next) => (
-    getTextAndImage(req, res, () => {
-        if (req.files.image) {
-            console.log('contain image : ', req.files.image)
-            doUpload(publicName, req, res, next)
-        } else {
-            console.log('only contain text!')
-            next()
-        }
-    })
-)
+const uploadTextAndImage = (publicName) => (req, res, next) => {
+    if (!req.body.text) {
+        console.log('with image')
+        getTextAndImage(req, res, () => {
+            if (req.files && req.files.image) {
+                console.log('contain image : ', req.files.image)
+                doUpload(publicName, req, res, next)
+            } else {
+                console.log('only contain text!')
+                next()
+            }
+        })
+    } else {
+        console.log('only contain text!')
+        next()
+    }
+
+}
 
 // POST /article should create a new article in mongo
 // return the saved article with an id,
@@ -59,7 +66,7 @@ const addArticle = (req, res) => {
     const imageUrl =  req.fileurl ?  req.fileurl : ""
 
     const username = req.username
-    if (req.body.text) {
+    if (req.body.text || req.fileurl) {
         new Article({
             author: username, img: imageUrl, date: new Date().getTime(),
             text: req.body.text}).save(function(err, doc) {
@@ -71,7 +78,7 @@ const addArticle = (req, res) => {
                 }
           })
     } else {
-        res.send("error : payload should have a text field.")
+        res.send(409, "error : payload should have a text field.")
     }
 
 }
